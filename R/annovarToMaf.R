@@ -14,6 +14,7 @@
 #' @param refBuild NCBI_Build field in MAF file will be filled with this value. Default hg19.
 #' @param tsbCol column name containing Tumor_Sample_Barcode or sample names in input file.
 #' @param table reference table used for gene-based annotations. Can be 'ensGene' or 'refGene'. Default 'refGene'
+#' @param ens2hugo If `table` is `ensGene`, setting this argument to `TRUE` converts all ensemble IDs to hugo symbols.
 #' @param basename If provided writes resulting MAF file to an output file.
 #' @param sep field seperator for input file. Default tab seperated.
 #' @param MAFobj If TRUE, returns results as an \code{\link{MAF}} object.
@@ -26,7 +27,7 @@
 #' tsbCol = 'Tumor_Sample_Barcode', table = 'ensGene')
 #' @export
 
-annovarToMaf = function(annovar, Center = NULL, refBuild = 'hg19', tsbCol = NULL, table = 'refGene', basename = NULL , sep = '\t', MAFobj = FALSE, sampleAnno = NULL){
+annovarToMaf = function(annovar, Center = NULL, refBuild = 'hg19', tsbCol = NULL, table = 'refGene', ens2hugo = TRUE, basename = NULL , sep = '\t', MAFobj = FALSE, sampleAnno = NULL){
 
   start_time = proc.time()
   cat("-Reading annovar files\n")
@@ -83,11 +84,10 @@ annovarToMaf = function(annovar, Center = NULL, refBuild = 'hg19', tsbCol = NULL
     #If multiple genes are assigned, used the first entry (which correpsonds to closest gene)
     ann[, Hugo_Symbol := unlist(data.table::tstrsplit(Gene.refGene, split = ";", keep = 1))]
 
-    #Annovar to MAF mappings
+    #Annovar to MAF mappings (http://annovar.openbioinformatics.org/en/latest/user-guide/gene/)
     annovar_values = c(
       exonic = "RNA",
       splicing = "Splice_Site",
-      ncRNA = "RNA",
       UTR5 = "5'UTR",
       UTR3 = "3'UTR",
       intronic = "Intron",
@@ -100,6 +100,8 @@ annovarToMaf = function(annovar, Center = NULL, refBuild = 'hg19', tsbCol = NULL
       `frameshift substitution` = "Frameshift_INDEL",
       stopgain = "Nonsense_Mutation",
       stoploss = "Nonstop_Mutation",
+      startloss = "Translation_Start_Site",
+      startgain = "Unknown", #Can not properly map MAF classification. Setting it to Unknown
       `nonframeshift insertion` = "In_Frame_Ins",
       `nonframeshift deletion` = "In_Frame_Del",
       `nonframeshift block substitution` = "Inframe_INDEL",
@@ -115,58 +117,87 @@ annovarToMaf = function(annovar, Center = NULL, refBuild = 'hg19', tsbCol = NULL
       ncRNA_splicing = "RNA"
     )
 
-    #Exonic variants
-    cat("-Processing Exonic variants\n")
     ann_exonic = ann[Func.refGene %in% 'exonic']
-    #Choose first entry for mixed annotations (e.g; exonic;splicing)
-    ann_exonic[, Func.refGene := data.table::tstrsplit(x = as.character(ann_exonic$Func.refGene), split = ";", keep = 1)]
-    cat("--Adding Variant_Classification\n")
-    ann_exonic[,Variant_Classification := annovar_values[ExonicFunc.refGene]]
-
-    #Parse aa-change for exonic variants
-    cat("--Parsing aa-change\n")
-    aa_change = unlist(data.table::tstrsplit(x = as.character(ann_exonic$AAChange.refGene),split = ',', fixed = TRUE, keep = 1))
-    aa_tbl = lapply(aa_change, function(x){
-      x = unlist(strsplit(x = x, split = ":", fixed = TRUE))
-
-      if(length(x) == 5){
-        #column contains the gene name, the transcript identifier, exon, tx-change, aa-change
-        #If these entries are missing, fill them with NAs
-        tx = x[2]
-        exon = x[3]
-        txChange = x[4]
-        aaChange = x[5]
-      }else{
-        tx = NA
-        exon = NA
-        txChange = NA
-        aaChange = NA
-      }
-
-      data.table::data.table(tx, exon, txChange, aaChange)
-    })
-    aa_tbl = data.table::rbindlist(l = aa_tbl)
-
-    if(length(aa_change) != nrow(ann_exonic)){
-      stop("Something went wrong parsing aa-change")
+    ann_res = ann[!Func.refGene %in% 'exonic']
+    if(nrow(ann_exonic) ==0 & nrow(ann_res) == 0){
+      stop("No suitable exonic or intronic variants found!")
     }
-    ann_exonic = cbind(ann_exonic, aa_tbl)
+
+    #Exonic variants
+    if(nrow(ann_exonic) > 0){
+      cat("-Processing Exonic variants\n")
+
+      #Choose first entry for mixed annotations (e.g; exonic;splicing)
+      ann_exonic[, Func.refGene := data.table::tstrsplit(x = as.character(ann_exonic$Func.refGene), split = ";", keep = 1)]
+      cat("--Adding Variant_Classification\n")
+      ann_exonic[,Variant_Classification := annovar_values[ExonicFunc.refGene]]
+
+      #Parse aa-change for exonic variants
+      cat("--Parsing aa-change\n")
+      aa_change = unlist(data.table::tstrsplit(x = as.character(ann_exonic$AAChange.refGene),split = ',', fixed = TRUE, keep = 1))
+      aa_tbl = lapply(aa_change, function(x){
+        x = unlist(strsplit(x = x, split = ":", fixed = TRUE))
+
+        if(length(x) == 5){
+          #column contains the gene name, the transcript identifier, exon, tx-change, aa-change
+          #If these entries are missing, fill them with NAs
+          tx = x[2]
+          exon = x[3]
+          txChange = x[4]
+          aaChange = x[5]
+        }else{
+          tx = NA
+          exon = NA
+          txChange = NA
+          aaChange = NA
+        }
+
+        data.table::data.table(tx, exon, txChange, aaChange)
+      })
+      aa_tbl = data.table::rbindlist(l = aa_tbl)
+
+      if(length(aa_change) != nrow(ann_exonic)){
+        stop("Something went wrong parsing aa-change")
+      }
+      ann_exonic = cbind(ann_exonic, aa_tbl)
+    }
 
     #Non-exonic variants
-    cat("-Processing Non-exonic variants\n")
-    ann_res = ann[!Func.refGene %in% 'exonic']
     if(nrow(ann_res) > 0){
+      cat("-Processing Non-exonic variants\n")
       ann_res[, Func.refGene := data.table::tstrsplit(x = as.character(ann_res$Func.refGene), split = ";", keep = 1)]
       cat("--Adding Variant_Classification\n")
       ann_res[,Variant_Classification := annovar_values[Func.refGene]]
       #Merge exonic and non-exonic variants
       ann = data.table::rbindlist(l = list(ann_exonic, ann_res), use.names = TRUE, fill = TRUE)
+    }else{
+      ann = ann_exonic
     }
 
     #Add Variant-type annotations based on difference between ref and alt alleles
     cat("-Adding Variant_Type\n")
     ann[,ref_alt_diff := nchar(Ref) - nchar(Alt)]
     ann[, Variant_Type := ifelse(ref_alt_diff == 0 , yes = "SNP", no = ifelse(ref_alt_diff < 0 , yes = "INS", no = "DEL"))]
+
+    #Check for MNPs (they are neither INDELS nor SNPs)
+    ann$Variant_Type = ifelse(
+        test = ann$Variant_Type == "SNP",
+        yes = ifelse(
+          test = nchar(ann$Ref) > 1,
+          yes = "MNP",
+          no = "SNP"
+        ),
+        no = ann$Variant_Type
+      )
+
+    #Annotate MNPs as Unknown VC
+    ann_mnps = ann[Variant_Type %in% "MNP"]
+    if(nrow(ann_mnps) > 0){
+      ann = ann[!Variant_Type %in% "MNP"]
+      ann_mnps[,Variant_Classification := "Unknown"]
+      ann = rbind(ann, ann_mnps)
+      rm(ann_mnps)
+    }
 
     #Frameshift_INDEL, Inframe_INDEL are annotated by annovar without INS or DEL status
     #Parse this based on difference between ref and alt alleles
@@ -198,21 +229,22 @@ annovarToMaf = function(annovar, Center = NULL, refBuild = 'hg19', tsbCol = NULL
 
   #Annovar ensGene doesn't provide HGNC gene symbols as Hugo_Symbol. We will change them manually.
   if(table == 'ensGene'){
-    ens = system.file('extdata', 'ensGenes.txt.gz', package = 'maftools')
-    cat('-Converting Ensemble Gene IDs into HGNC gene symbols\n')
-    ens = data.table::fread(file =  ens, sep = '\t', stringsAsFactors = FALSE)
+    if(ens2hugo){
+      ens = system.file('extdata', 'ensGenes.txt.gz', package = 'maftools')
+      cat('-Converting Ensemble Gene IDs into HGNC gene symbols\n')
+      ens = data.table::fread(file =  ens, sep = '\t', stringsAsFactors = FALSE)
 
-    ann = merge(ann, ens, by.x = 'Hugo_Symbol', by.y = 'ens_id', all.x = TRUE)
-    ann[,ens_id := Hugo_Symbol] #Backup original ids
-    ann[,Hugo_Symbol := hgnc_symbol] #Add GHNC gene names
-    ann[,Entrez_Gene_Id := Entrez] #Add entrez identifiers.
-    cat('--Done. Original ensemble gene IDs are preserved under field name ens_id\n')
+      ann = merge(ann, ens, by.x = 'Hugo_Symbol', by.y = 'ens_id', all.x = TRUE)
+      ann[,ens_id := Hugo_Symbol] #Backup original ids
+      ann[,Hugo_Symbol := hgnc_symbol] #Add GHNC gene names
+      ann[,Entrez_Gene_Id := Entrez] #Add entrez identifiers.
+      cat('--Done. Original ensemble gene IDs are preserved under field name ens_id\n')
+    }
   }
     ann[, ref_alt_diff := NULL]
 
-
   #Re-roganize columns
-  colnames(ann)[which(colnames(ann) %in% c("Chr", "Start", "End", "Ref", "Alt"))] = c("Chromosome", "Start_Position", "End_Position", "Reference_Allele", "Tumor_Seq_Allele2")
+  colnames(ann)[match(c("Chr", "Start", "End", "Ref", "Alt"), colnames(ann))] = c("Chromosome", "Start_Position", "End_Position", "Reference_Allele", "Tumor_Seq_Allele2")
   ord1 = colnames(x = ann)[colnames(x = ann) %in% c("Hugo_Symbol", "Chromosome", "Start_Position", "End_Position", "Reference_Allele", "Tumor_Seq_Allele2", "Variant_Classification", "Variant_Type", "Tumor_Sample_Barcode", "tx", "exon", "txChange", "aaChange")]
   ord2 = colnames(x = ann)[!colnames(x = ann) %in% c("Hugo_Symbol", "Chromosome", "Start_Position", "End_Position", "Reference_Allele", "Tumor_Seq_Allele2", "Variant_Classification", "Variant_Type", "Tumor_Sample_Barcode", "tx", "exon", "txChange", "aaChange")]
   ann = ann[,c(ord1, ord2), with = FALSE]

@@ -1,9 +1,13 @@
 Package: maftools
 Type: Package
 Title: Summarize, Analyze and Visualize MAF Files
-Version: 1.9.45
+Version: 2.3.20
 Date: 2015-12-14
-Author: Anand Mayakonda <anand_mt@hotmail.com>
+Authors@R: 
+    person(given = "Anand",
+           family = "Mayakonda",
+           email = "anand_mt@hotmail.com",
+           comment = c(ORCID = "0000-0003-1162-687X"), role = c("aut","cre"))
 Maintainer: Anand Mayakonda <anand_mt@hotmail.com>
 Description: Analyze and visualize Mutation Annotation Format (MAF) files from large scale sequencing studies. This package provides various functions to perform most commonly used analyses in cancer genomics and to create feature rich customizable visualzations with minimal effort.
 URL: https://github.com/PoisonAlien/maftools
@@ -13,18 +17,14 @@ LazyData: TRUE
 Depends: R (>= 3.3)
 Imports: 
     data.table,
-    cometExactTest,
     RColorBrewer,
-    NMF,
     methods,
-    rjson,
-    grid,
     wordcloud,
     grDevices,
     survival
-RoxygenNote: 6.1.1
+RoxygenNote: 7.0.2
 Encoding: UTF-8
-Suggests: knitr, rmarkdown, BSgenome, Biostrings, mclust
+Suggests: knitr, rmarkdown, BSgenome, Biostrings, NMF, mclust
 VignetteBuilder: knitr
 biocViews: DataRepresentation, DNASeq, Visualization, DriverMutation, VariantAnnotation,
         FeatureExtraction, Classification, SomaticMutation, Sequencing, FunctionalGenomics, Survival

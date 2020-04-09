@@ -20,7 +20,7 @@ vignette: >
 <img src="maftools.png" height="100" width="250" style="position:absolute;top:30px;right:0px;" />
 
 # Introduction
-With advances in Cancer Genomics, [Mutation Annotation Format](https://wiki.nci.nih.gov/display/TCGA/Mutation+Annotation+Format+(MAF)+Specification) (MAF) is being widely accepted and used to store somatic variants detected. 
+With advances in Cancer Genomics, [Mutation Annotation Format](https://docs.gdc.cancer.gov/Data/File_Formats/MAF_Format/) (MAF) is being widely accepted and used to store somatic variants detected. 
 [The Cancer Genome Atlas](http://cancergenome.nih.gov) Project has sequenced over 30 different cancers with sample size of each cancer type being over 200. [Resulting data](https://wiki.nci.nih.gov/display/TCGA/TCGA+MAF+Files) consisting of somatic variants are stored in the form of [Mutation Annotation Format](https://docs.gdc.cancer.gov/Data/File_Formats/MAF_Format/). This package attempts to summarize, analyze, annotate and visualize MAF files in an efficient manner from either TCGA sources or any in-house studies as long as the data is in MAF format.
 
 ## Citation
@@ -30,7 +30,7 @@ If you find this tool useful, please cite:
 ***
 **_Mayakonda A, Lin DC, Assenov Y, Plass C, Koeffler HP. 2018. 
 Maftools: efficient and comprehensive analysis of somatic variants in cancer. 
-[Genome Resarch](https://doi.org/10.1101/gr.239244.118)_**
+[Genome Resarch](https://doi.org/10.1101/gr.239244.118) [PMID: 30341162](https://www.ncbi.nlm.nih.gov/pubmed/30341162)_**
 
 ***
 
@@ -76,7 +76,9 @@ maftools functions can be categorized into mainly Visualization and Analysis mod
 
 ```{r results='hide', message=FALSE}
 library(maftools)
+```
 
+```{r}
 #path to TCGA LAML MAF file
 laml.maf = system.file('extdata', 'tcga_laml.maf.gz', package = 'maftools') 
 #clinical information containing survival information and histology. This is optional
@@ -240,25 +242,22 @@ plotCBSsegments(cbsFile = tcga.ab.009.seg)
 ## Somatic Interactions
 Many disease causing genes in cancer are co-occurring or show strong exclusiveness in their mutation pattern. Such mutually exclusive or co-occurring set of genes can be detected using `somaticInteractions` function, which performs pair-wise Fisher's Exact test to detect such significant pair of genes. `somaticInteractions` function also uses `cometExactTest` to identify potentially altered gene sets involving >2 two genes  [6](#references).
 
-```{r, message=FALSE}
+```{r, message=FALSE, fig.height=5, fig.width=5}
 #exclusive/co-occurance event analysis on top 10 mutated genes. 
 somaticInteractions(maf = laml, top = 25, pvalue = c(0.05, 0.1))
 ```
-
-We can visualize the above results using `oncostrip`. For example, in above analysis, gene set TP53, FLT3 and RUNX1 show a strong exclusiveness with each other a p-value of 4.8e-5. 
-
-```{r, fig.height=2.3,fig.width=8,fig.align='center'}
-oncostrip(maf = laml, genes = c('TP53', 'FLT3', 'RUNX1'))
-```
-
 
 ## Detecting cancer driver genes based on positional clustering
 maftools has a function `oncodrive` which identifies cancer genes (driver) from a given MAF. `oncodrive` is a based on algorithm [oncodriveCLUST](http://bg.upf.edu/group/projects/oncodrive-clust.php) which was originally implemented in Python. Concept is based on the fact that most of the variants in cancer causing genes are enriched at few specific loci (aka hot-spots). This method takes advantage of such positions to identify cancer genes. If you use this function, please cite [OncodriveCLUST article](http://bioinformatics.oxfordjournals.org/content/early/2013/07/31/bioinformatics.btt395.full) [7](#references).
 
 ```{r, fig.align='default', fig.width=7,fig.height=5, message=F,results='hide', eval=T}
 laml.sig = oncodrive(maf = laml, AACol = 'Protein_Change', minMut = 5, pvalMethod = 'zscore')
+```
+
+```{r}
 head(laml.sig)
 ```
+
 
 We can plot the results using `plotOncodrive`.
 ```{r, fig.align='left', fig.width=5, fig.height=4}
@@ -297,9 +296,26 @@ Survival analysis is an essential part of cohort based sequencing projects. Func
 
 Our annotation data already contains survival information and in case you have survival data stored in a separate table provide them via argument `clinicalData`
 
+### Mutation in any given genes
 ```{r, fig.width=5, fig.height=5}
 #Survival analysis based on grouping of DNMT3A mutation status
 mafSurvival(maf = laml, genes = 'DNMT3A', time = 'days_to_last_followup', Status = 'Overall_Survival_Status', isTCGA = TRUE)
+```
+
+### Predict genesets associated with survival
+Identify set of genes which results in poor survival
+
+```{r}
+#Using top 20 mutated genes to identify a set of genes (of size 2) to predict poor prognostic groups
+prog_geneset = survGroup(maf = laml, top = 20, geneSetSize = 2, time = "days_to_last_followup", Status = "Overall_Survival_Status", verbose = FALSE)
+
+print(prog_geneset)
+```
+
+Above results show a combination (N = 2) of genes which are associated with poor survival (P < 0.05). We can draw KM curve for above results with the function `mafSurvGroup`
+
+```{r, fig.width=5, fig.height=5}
+mafSurvGroup(maf = laml, geneSet = c("DNMT3A", "FLT3"), time = "days_to_last_followup", Status = "Overall_Survival_Status")
 ```
 
 ## Comparing two cohorts (MAFs)
@@ -334,6 +350,12 @@ Another alternative way of displaying above results is by plotting two oncoplots
 genes = c("PML", "RARA", "RUNX1", "ARID1B", "FLT3")
 coOncoplot(m1 = primary.apl, m2 = relapse.apl, m1Name = 'PrimaryAPL', m2Name = 'RelapseAPL', genes = genes, removeNonMutated = TRUE)
 ```
+
+### Co-bar plots
+```{r, fig.height=4, fig.width=5}
+coBarplot(m1 = primary.apl, m2 = relapse.apl, m1Name = "Primary", m2Name = "Relapse")
+```
+
 
 ### Lollipop plot-2
 Along with plots showing cohort wise differences, its also possible to show gene wise differences with `lollipopPlot2` function.
@@ -459,41 +481,88 @@ plotApobecDiff(tnm = laml.tnm, maf = laml, pVal = 0.2)
 ```
 
 ### Signature analysis
-`extractSignatures` uses non-negative matrix factorization to decompose nx96 dimension matrix into r signatures, where n is the number of samples from input MAF [11](#references). By default function runs nmf on 6 ranks and chooses the best possible value based on maximum cophenetic-correlation coefficient. It is also possible to manually specify r. Once decomposed, signatures are compared against known signatures derived from [Alexandrov et.al](http://www.nature.com/nature/journal/v500/n7463/full/nature12477.html), and cosine similarity is calculated to identify best match.
+Signature analysis includes following steps.
 
+  1. `estimateSignatures` - which runs NMF on a range of values and measures the goodness of fit - in terms of [Cophenetic correlation](https://en.wikipedia.org/wiki/Cophenetic_correlation).
+  2. `plotCophenetic` - which draws an elblow plot and helps you to decide optimal number of signatures. Best possible signature is the value at which Cophenetic correlation drops significantly.
+  3. `extractSignatures` - uses non-negative matrix factorization to decompose the matrix into `n` signatures. `n` is chosen based on the above two steps. In case if you already have a good estimate of `n`, you can skip above two steps.
+  4. `compareSignatures` - extracted signatures from above step can be compared to known signatures[11](#references) from [COSMIC](https://cancer.sanger.ac.uk/cosmic/signatures/SBS/) database, and cosine similarity is calculated to identify best match.
+  5. `plotSignatures` - plots signatures
+
+```{r, echo=FALSE}
+par(mar = c(2, 2, 2, 1))
+plot(NA, xlim = c(1, 10), ylim = c(0, 30), frame.plot = FALSE, axes = FALSE, xlab = NA, ylab = NA)
+rect(xleft = 3, ybottom = 28, xright = 7, ytop = 30, col = grDevices::adjustcolor("gray70", alpha.f = 0.6), lwd = 1.2, border = "maroon")
+text(x = 5, y = 29, labels = "MAF", font = 2)
+arrows(x0 = 5, y0 = 28, x1 = 5, y1 = 26, length = 0.1, lwd = 2)
+text(x = 5, y = 25, labels = "trinucleotideMatrix()", font = 3)
+arrows(x0 = 5, y0 = 24, x1 = 5, y1 = 21, length = 0.1, lwd = 2)
+text(x = 5, y = 20, labels = "estimateSignatures()", font = 3)
+arrows(x0 = 5, y0 = 19, x1 = 5, y1 = 16, length = 0.1, lwd = 2)
+text(x = 5, y = 15, labels = "plotCophenetic()", font = 3)
+arrows(x0 = 5, y0 = 14, x1 = 5, y1 = 11, length = 0.1, lwd = 2)
+text(x = 5, y = 10, labels = "extractSignatures()", font = 3)
+arrows(x0 = 5, y0 = 9, x1 = 5, y1 = 6, length = 0.1, lwd = 2)
+text(x = 5, y = 5, labels = "compareSignatures()", font = 3)
+arrows(x0 = 5, y0 = 4, x1 = 5, y1 = 1, length = 0.1, lwd = 2)
+text(x = 5, y = 0, labels = "plotSignatures()", font = 3)
+```
+
+***Note:*** In previous versions, `extractSignatures` used to take care of above steps automatically. After versions 2.2.0, main function is split inot above 5 stpes for user flexibility.
 
 ```{r, fig.height=5, fig.width=5, eval=FALSE, message=FALSE}
+library('NMF')
+laml.sign = estimateSignatures(mat = laml.tnm, nTry = 6)
+```
+
+```{r, fig.height=3, fig.width=3, eval=TRUE, message=FALSE, echo=FALSE, include=FALSE}
 #Run main function with maximum 6 signatures. 
 library('NMF')
-laml.sign = extractSignatures(mat = laml.tnm, nTry = 6, plotBestFitRes = FALSE)
-
-# Comparing against experimentally validated 30 signatures.. (See http://cancer.sanger.ac.uk/cosmic/signatures for details.)
-# Found Signature_1 most similar to validated Signature_1. Aetiology: spontaneous deamination of 5-methylcytosine [cosine-similarity: 0.919] 
-# Found Signature_2 most similar to validated Signature_5. Aetiology: Unknown [cosine-similarity: 0.82] 
+laml.sign = estimateSignatures(mat = laml.tnm, nTry = 6, pConstant = 0.1, plotBestFitRes = FALSE, parallel = 2)
 ```
 
-```{r, fig.height=5, fig.width=5, eval=TRUE, message=FALSE, echo=FALSE}
-#Run main function with maximum 6 signatures. 
-library('NMF')
-laml.sign = extractSignatures(mat = laml.tnm, n = 2, plotBestFitRes = FALSE, pConstant = 0.1)
+Draw elbow plot to visualize and decide optimal number of signatures from above results.
+```{r, fig.width=3, fig.height=3}
+plotCophenetic(res = laml.sign)
 ```
 
-```{r, fig.width=6, fig.height=4, fig.align='center', eval = T}
-plotSignatures(laml.sign, title_size = 0.8, )
+Best possible value is the one at which the correlation value on the y-axis drops significantly. In this case it appears to be at `n = 3`. LAML is not an ideal example for signature analysis with its low mutation rate, but for solid tumors with higher mutation burden one could expect more signatures, provided sufficient number of samples.
+
+Once `n` is estimated, we can run the main function.
+
+```{r, eval=FALSE}
+laml.sig = extractSignatures(mat = laml.tnm, n = 3)
 ```
 
-`extractSignatures` gives a warning that no mutations are found for class A[T>G]C conversions. This is possible when the number of samples are low or in tumors with low mutation rate, such as in this case of Leukemia. In this scenario, a small positive value is added to avoid computational difficulties. It also prints other statistics for range of values that was tried, and chooses the rank with highest cophenetic metric (for above example r=2). Above stats should give an estimate of range of best possible r values and in case the chosen r is overfitted/underfitted, it is also possible to be re-run `extractSignatures` by manually specifying r.
+```{r, eval=TRUE, echo=FALSE}
+laml.sig = extractSignatures(mat = laml.tnm, n = 3, pConstant = 0.1,  parallel = 2)
+```
 
-Once decomposed, signatures are compared against known and validated signatures from Sanger [11](#references). See [here](http://cancer.sanger.ac.uk/cosmic/signatures) for list of validated signatures. In the above example, 2 signatures are derived, which are similar to validated Signature-1 and Signature-5. Signature_1 is a result of elevated rate of spontaneous deamination of 5-methyl-cytosine, resulting in C>T transitions and predominantly occurs at NpCpG trinucleotide, which is a most common process in AML [12](#references). 
+Compare detected signatures to known signatures from COSMIC database.
+```{r}
+#Compate against original 30 signatures 
+laml.og30.cosm = compareSignatures(nmfRes = laml.sig, sig_db = "legacy")
+#Compate against updated version3 60 signatures 
+laml.v3.cosm = compareSignatures(nmfRes = laml.sig, sig_db = "SBS")
+```
 
-Full table of cosine similarities against validated signatures are also returned, which can be further analysed. Below plot shows comparison of similarities of detected signatures against validated signatures.
+`compareSignatures` returns full table of cosine similarities against COSMIC signatures, which can be further analysed. Below plot shows comparison of similarities of detected signatures against validated signatures.
 
 ```{r, fig.width=7, fig.height=2.5, fig.align='center'}
 library('pheatmap')
-pheatmap::pheatmap(mat = laml.sign$coSineSimMat, cluster_rows = FALSE, main = "cosine similarity against validated signatures")
+pheatmap::pheatmap(mat = laml.og30.cosm$cosine_similarities, cluster_rows = FALSE, main = "cosine similarity against validated signatures")
 ```
 
-NOTE: Should you receive an error while running `extractSignatures` complaining `none of the packages are loaded`, please manually load the "NMF" library and re-run.
+Finally plot signatures
+```{r, fig.width=6, fig.height=4, fig.align='center', eval = T}
+maftools::plotSignatures(nmfRes = laml.sig, title_size = 0.8)
+```
+
+***NOTE:***
+
+1. Should you receive an error while running `extractSignatures` complaining `none of the packages are loaded`, please manually load the `NMF` library and re-run.
+
+2. If either `extractSignatures` or `estimateSignatures` stops in between, its possibly due to low mutation counts in the matrix. In that case rerun the functions with `pConstant` argument set to small positive value (e.g, 0.1).
 
 ### Signature enrichment analysis
 Signatures can further be assigned to samples and enrichment analysis can be performd using `signatureEnrichment` funtion, which identifies mutations enriched in every signature identified. 
@@ -504,7 +573,7 @@ colnames(laml.sign$contributions) = as.character(getSampleSummary(x = laml)[,Tum
 
 
 ```{r, fig.height=3.5, fig.width=5, warning=FALSE}
-laml.se = signatureEnrichment(maf = laml, sig_res = laml.sign)
+laml.se = signatureEnrichment(maf = laml, sig_res = laml.sig)
 ```
 
 Above results can be visualzied similar to clinical enrichments.
@@ -515,28 +584,6 @@ plotEnrichmentResults(enrich_res = laml.se, pVal = 0.05)
 
 
 # Variant Annotations
-## Annotating variants using Oncotator
-We can also annotate variants using [oncotator](http://www.broadinstitute.org/oncotator/) API [14](#references). `oncotate` function quires oncotator web api to annotate given set of variants and converts them into MAF format. Input should be a five column file with chr, start, end, ref_allele, alt_allele. However, it can contain other information such as sample names (Tumor_Sample_Barcode), read counts, vaf information and so on, but only first five columns will be used, rest of the columns will be attached at the end of the table.
-
-```{r}
-var.file = system.file('extdata', 'variants.tsv', package = 'maftools')
-#This is what input looks like
-var = read.delim(var.file, sep = '\t')
-head(var)
-```
-
-```{r, results='hide', eval=F, message=F}
-#Annotate 
-var.maf = oncotate(maflite = var.file, header = TRUE)
-```
-
-```{r, eval = F}
-#Results from oncotate. First 20 columns.
-var.maf[1:10, 1:20, with = FALSE]
-```
-
-NOTE: This is quite time consuming if input is big.
-
 ## Converting annovar output to MAF
 Annovar is one of the most widely used Variant Annotation tool in Genomics [17](#references). Annovar output is generally in a tabular format with various annotation columns. This function converts such annovar output files into MAF. This function requires that annovar was run with gene based annotation as a first operation, before including any filter or region based annotations.
 
@@ -608,6 +655,16 @@ subsetMaf(maf = laml, genes = c('DNMT3A', 'NPM1'), mafObj = FALSE,query = "Varia
 subsetMaf(maf = laml, genes = c('DNMT3A', 'NPM1'), mafObj = FALSE, query = "Variant_Classification == 'Splice_Site'", fields = 'i_transcript_name')
 ```
 
+### Subsetting by clinical data
+
+Use `clinQuery` argument in `subsetMaf` to select samples of interest based on their clinical features.
+
+```{r}
+#Select all samples with FAB clasification M4 in clinical data 
+laml_m4 = subsetMaf(maf = laml, clinQuery = "FAB_classification %in% 'M4'")
+```
+
+
 # Pre-compiled TCGA MAF objects
 There is also an R data package containing pre-compiled TCGA MAF objects from TCGA firehose and TCGA [MC3](https://gdc.cancer.gov/about-data/publications/mc3-2017) projects, particularly helpful for those working with TCGA mutation data. Every dataset is stored as an MAF object containing somatic mutations along with clinical information. Due to Bioconductor package size limits and other difficulties, this was not submitted to Bioconductor. However, you can still download [TCGAmutations](https://github.com/PoisonAlien/TCGAmutations) package from GitHub. 
 
@@ -621,7 +678,6 @@ devtools::install_github(repo = "PoisonAlien/TCGAmutations")
 3.	Mermel, C.H. et al. GISTIC2.0 facilitates sensitive and confident localization of the targets of focal somatic copy-number alteration in human cancers. Genome Biol 12, R41 (2011).
 4.	Olshen, A.B., Venkatraman, E.S., Lucito, R. & Wigler, M. Circular binary segmentation for the analysis of array-based DNA copy number data. Biostatistics 5, 557-72 (2004).
 5.	Alexandrov, L.B. et al. Signatures of mutational processes in human cancer. Nature 500, 415-21 (2013).
-6.	Leiserson, M.D., Wu, H.T., Vandin, F. & Raphael, B.J. CoMEt: a statistical approach to identify combinations of mutually exclusive alterations in cancer. Genome Biol 16, 160 (2015).
 7.	Tamborero, D., Gonzalez-Perez, A. & Lopez-Bigas, N. OncodriveCLUST: exploiting the positional clustering of somatic mutations to identify cancer genes. Bioinformatics 29, 2238-44 (2013).
 8.	Dees, N.D. et al. MuSiC: identifying mutational significance in cancer genomes. Genome Res 22, 1589-98 (2012).
 9. Lawrence MS, Stojanov P, Mermel CH, Robinson JT, Garraway LA, Golub TR, Meyerson M, Gabriel SB, Lander ES, Getz G: Discovery and saturation analysis of cancer genes across 21 tumour types. Nature 2014, 505:495-501.
@@ -645,8 +701,8 @@ sessionInfo()
 ## Github
 If you have any issues, bug reports or feature requests please feel free to raise an [issue](https://github.com/PoisonAlien/maftools/issues) on [GitHub](https://github.com/PoisonAlien/maftools) page.
 
-## acknowledgements
-
+## Acknowledgements
+  * Thanks to [Shixiang Wang](https://github.com/ShixiangWang) for many bug fixes, improvements, feature requests, and contribution to overall package maintenance
   * Thanks to [Ryan Morin](https://github.com/rdmorin) for crucial bug fixes
   * Thanks to [Peter Ellis](https://twitter.com/ellis2013nz) for beautiful [markdown template](http://ellisp.github.io/blog/2017/09/09/rmarkdown)
   * `somaticInteractions` plot is inspired from the article [Combining gene mutation with gene expression data improves outcome prediction in myelodysplastic syndromes](https://www.nature.com/articles/ncomms6901). Thanks to authors for making source code available.

@@ -1,9 +1,10 @@
 print_mat = function(maf, genes, removeNonMutated = TRUE, colors = NULL,
                      bgCol = 'gray70', borderCol = 'white', fontSize = 1,
                      plot2 = FALSE, test = FALSE, clinicalFeatures = NULL,
+                     additionalFeature = NULL, additionalFeaturePch = 20, additionalFeatureCol = "white", additionalFeatureCex = 0.9,
                      annotationDat = NULL, annotationColor = NULL,
                      sortByAnnotation = FALSE, showBarcodes = FALSE,
-                     title = NULL, title_size = 1.2, barcode_size = 1){
+                     title = NULL, title_size = 1.2, barcode_size = 1, sepwd_samples = 0.1, sepwd_genes = 0.1){
 
   tsbs = levels(getSampleSummary(x = maf)[,Tumor_Sample_Barcode])
   genes = as.character(genes)
@@ -107,7 +108,6 @@ print_mat = function(maf, genes, removeNonMutated = TRUE, colors = NULL,
     return(list(numMat, vc_col[om$vc]))
   }
 
-
   nm = t(apply(numMat, 2, rev))
   nm[nm == 0] = NA
   image(x = 1:nrow(nm), y = 1:ncol(nm), z = nm, axes = FALSE, xaxt="n", yaxt="n",
@@ -119,8 +119,8 @@ print_mat = function(maf, genes, removeNonMutated = TRUE, colors = NULL,
     col = vc_col[vc_code]
     nm = t(apply(numMat, 2, rev))
     nm[nm != names(vc_code)] = NA
-    image(x = 1:nrow(nm), y = 1:ncol(nm), z = nm, axes = FALSE, xaxt="n", yaxt="n",
-          xlab="", ylab="", col = col, add = TRUE)
+    suppressWarnings(image(x = 1:nrow(nm), y = 1:ncol(nm), z = nm, axes = FALSE, xaxt="n", yaxt="n",
+          xlab="", ylab="", col = col, add = TRUE))
   }
 
   #Add blanks
@@ -147,7 +147,13 @@ print_mat = function(maf, genes, removeNonMutated = TRUE, colors = NULL,
       nm_temp[ce_idx] = 0
       image(x = 1:nrow(nm_temp), y = 1:ncol(nm_temp), z = nm_temp, axes = FALSE, xaxt="n",
             yaxt="n", xlab="", ylab="", col = vc_col[ce[2]], add = TRUE)
-      points(ce_idx, pch= 15, col= vc_col[ce[1]])
+      #points(ce_idx, pch= 15, col= vc_col[ce[1]])
+      ce_idx = which(t(nm_temp) == 0, arr.ind = TRUE)
+      for(i in seq_len(nrow(ce_idx))){
+        rowi = ce_idx[i,1]
+        coli = ce_idx[i,2]
+        rect(xleft = coli-0.5, ybottom = rowi-0.25, xright = coli+0.5, ytop = rowi+0.25, col = vc_col[ce[1]], border = NA, lwd = 0)
+      }
     }
   }
 
@@ -159,7 +165,12 @@ print_mat = function(maf, genes, removeNonMutated = TRUE, colors = NULL,
     nm_temp[amp_idx] = 0
     image(x = 1:nrow(nm_temp), y = 1:ncol(nm_temp), z = nm_temp, axes = FALSE, xaxt="n",
           yaxt="n", xlab="", ylab="", col = bgCol, add = TRUE)
-    points(amp_idx, pch= 15, col= vc_col['Amp'], cex = 1.5)
+    amp_idx = which(t(nm_temp) == 0, arr.ind = TRUE)
+    for(i in seq_len(nrow(amp_idx))){
+      rowi = amp_idx[i,1]
+      coli = amp_idx[i,2]
+      rect(xleft = coli-0.5, ybottom = rowi-0.25, xright = coli+0.5, ytop = rowi+0.25, col = vc_col['Amp'], border = NA, lwd = 0)
+    }
   }
 
   if(nrow(del_idx) > 0){
@@ -167,12 +178,55 @@ print_mat = function(maf, genes, removeNonMutated = TRUE, colors = NULL,
     nm_temp[del_idx] = 0
     image(x = 1:nrow(nm_temp), y = 1:ncol(nm_temp), z = nm_temp, axes = FALSE, xaxt="n",
           yaxt="n", xlab="", ylab="", col = bgCol, add = TRUE)
-    points(del_idx, pch= 15, col= vc_col['Del'], cex = 1.5)
+    del_idx = which(t(nm_temp) == 0, arr.ind = TRUE)
+    for(i in seq_len(nrow(del_idx))){
+      rowi = del_idx[i,1]
+      coli = del_idx[i,2]
+      rect(xleft = coli-0.5, ybottom = rowi-0.25, xright = coli+0.5, ytop = rowi+0.25, col = vc_col['Del'], border = NA, lwd = 0)
+    }
+  }
+
+  #Draw if any additional features are requested
+  additionalFeature_legend = FALSE
+  if(!is.null(additionalFeature)){
+    if(length(additionalFeature) < 2){
+      stop("additionalFeature must be of length two. See ?oncoplot for details.")
+    }
+    af_dat = subsetMaf(maf = maf, genes = rownames(numMat), tsb = colnames(numMat), fields = additionalFeature[1], includeSyn = FALSE, mafObj = FALSE)
+    if(length(which(colnames(af_dat) == additionalFeature[1])) == 0){
+      message(paste0("Column ", additionalFeature[1], " not found in maf. Here are available fields.."))
+      print(getFields(maf))
+      stop()
+    }
+    colnames(af_dat)[which(colnames(af_dat) == additionalFeature[1])] = 'temp_af'
+    af_dat = af_dat[temp_af %in% additionalFeature[2]]
+    if(nrow(af_dat) == 0){
+      warning(paste0("No samples are enriched for ", additionalFeature[2], " in ", additionalFeature[1]))
+    }else{
+      af_mat = data.table::dcast(data = af_dat, Tumor_Sample_Barcode ~ Hugo_Symbol, value.var = "temp_af", fun.aggregate = length)
+      af_mat = as.matrix(af_mat, rownames = "Tumor_Sample_Barcode")
+
+      nm = t(apply(numMat, 2, rev))
+
+      lapply(seq_len(nrow(af_mat)), function(i){
+        af_i = af_mat[i,, drop = FALSE]
+        af_i_genes = colnames(af_i)[which(af_i > 0)]
+        af_i_sample = rownames(af_i)
+
+        lapply(af_i_genes, function(ig){
+          af_i_mat = matrix(c(which(rownames(nm) == af_i_sample),
+                              which(colnames(nm) == ig)),
+                            nrow = 1)
+          points(af_i_mat, pch = additionalFeaturePch, col= additionalFeatureCol, cex = additionalFeatureCex)
+        })
+      })
+      additionalFeature_legend = TRUE
+    }
   }
 
   #Add grids
-  abline(h = (1:ncol(nm)) + 0.5, col = borderCol)
-  abline(v = (1:nrow(nm)) + 0.5, col = borderCol)
+  abline(h = (1:ncol(nm)) + 0.5, col = borderCol, lwd = sepwd_genes)
+  abline(v = (1:nrow(nm)) + 0.5, col = borderCol, lwd = sepwd_samples)
   title(title, cex.main = title_size, outer = FALSE, font = 2)
 
   # mtext(text = colnames(nm), side = 2, at = 1:ncol(nm),
@@ -181,7 +235,7 @@ print_mat = function(maf, genes, removeNonMutated = TRUE, colors = NULL,
     mtext(text = rev(percent_alt), side = 4, at = 1:ncol(nm),
           font = 1, line = 0.4, cex = fontSize, las = 2, adj = 0)
     if(showBarcodes){
-      text(x =1:nrow(nm), y = par("usr")[3] - 0.2,
+      text(x =1:nrow(nm), y = 0.40,
            labels = rownames(nm), srt = 90, font = 1,
            cex = barcode_size, adj = 1)
     }
@@ -189,7 +243,7 @@ print_mat = function(maf, genes, removeNonMutated = TRUE, colors = NULL,
     mtext(text = rev(percent_alt), side = 2, at = 1:ncol(nm),
           font = 1, line = 0.4, cex = fontSize, las = 2, adj = 1)
     if(showBarcodes){
-      text(x =1:nrow(nm), y = par("usr")[3] - 0.2,
+      text(x =1:nrow(nm), y = 0.40,
            labels = rownames(nm), srt = 90, font = 1,
            cex = barcode_size, adj = 1)
     }
@@ -252,13 +306,13 @@ print_mat = function(maf, genes, removeNonMutated = TRUE, colors = NULL,
       #temp_anno = t(apply(annotation, 2, rev))
       temp_anno = as.matrix(annotation)
       temp_anno[temp_anno != names(anno_code)] = NA
-      image(x = 1:nrow(temp_anno), y = 1:ncol(temp_anno), z = temp_anno,
-            axes = FALSE, xaxt="n", yaxt="n", xlab="", ylab="", col = col, add = TRUE)
+      suppressWarnings(image(x = 1:nrow(temp_anno), y = 1:ncol(temp_anno), z = temp_anno,
+            axes = FALSE, xaxt="n", yaxt="n", xlab="", ylab="", col = col, add = TRUE))
     }
 
     #Add grids
-    abline(h = (1:ncol(nm)) + 0.5, col = "white")
-    abline(v = (1:nrow(nm)) + 0.5, col = "white")
+    abline(h = (1:ncol(nm)) + 0.5, col = "white", lwd = sepwd_genes)
+    abline(v = (1:nrow(nm)) + 0.5, col = "white", lwd = sepwd_samples)
     if(plot2){
       mtext(text = colnames(annotation), side = 4,
             font = 1, line = 0.4, cex = fontSize, las = 2, at = 1:ncol(annotation))
