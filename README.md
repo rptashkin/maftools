@@ -31,6 +31,9 @@ BiocManager::install("maftools")
 
 #Install from GitHub repository
 BiocManager::install("PoisonAlien/maftools")
+
+#Install from develop branch
+devtools::install_github("rptashkin/maftools", ref = "develop")
 ```
 
 ## Vignette and a case study
