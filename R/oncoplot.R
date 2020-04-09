@@ -548,6 +548,7 @@ oncoplot = function(maf, top = 20, genes = NULL, altered = FALSE, mutsig = NULL,
   additionalFeature_legend = FALSE
   if(!is.null(additionalFeature)){
     #If its a list, multi features to be mapped
+    additionalFeature_legend = TRUE
     if(is.list(additionalFeature)){
       for(af_idx in seq_along(additionalFeature)){
         af = additionalFeature[[af_idx]]
@@ -591,7 +592,6 @@ oncoplot = function(maf, top = 20, genes = NULL, altered = FALSE, mutsig = NULL,
               points(af_i_mat, pch = additionalFeaturePch[af_idx], col= additionalFeatureCol[af_idx], cex = additionalFeatureCex)
             })
           })
-          additionalFeature_legend = TRUE
         }
       }
     }else{
@@ -599,34 +599,38 @@ oncoplot = function(maf, top = 20, genes = NULL, altered = FALSE, mutsig = NULL,
         stop("additionalFeature must be of length two. See ?oncoplot for details.")
       }
       af_dat = subsetMaf(maf = maf, genes = rownames(numMat), tsb = colnames(numMat), fields = additionalFeature[1], includeSyn = FALSE, mafObj = FALSE)
+      
       if(length(which(colnames(af_dat) == additionalFeature[1])) == 0){
         message(paste0("Column ", additionalFeature[1], " not found in maf. Here are available fields.."))
         print(getFields(maf))
         stop()
       }
       colnames(af_dat)[which(colnames(af_dat) == additionalFeature[1])] = 'temp_af'
-      af_dat = af_dat[temp_af %in% additionalFeature[2]]
-      if(nrow(af_dat) == 0){
-        warning(paste0("No samples are enriched for ", additionalFeature[2], " in ", additionalFeature[1]))
-      }else{
-        af_mat = data.table::dcast(data = af_dat, Tumor_Sample_Barcode ~ Hugo_Symbol, value.var = "temp_af", fun.aggregate = length)
-        af_mat = as.matrix(af_mat, rownames = "Tumor_Sample_Barcode")
+      for(j in 2:length(additionalFeature)){
+        af_dat_new = af_dat[temp_af %in% additionalFeature[j]]
+        if(nrow(af_dat_new) == 0){
+          warning(paste0("No samples are enriched for ", additionalFeature[j], " in ", additionalFeature[1]))
+        }else{
+          af_mat = data.table::dcast(data = af_dat_new, Tumor_Sample_Barcode ~ Hugo_Symbol, value.var = "temp_af", fun.aggregate = length)
+          af_mat = as.matrix(af_mat, rownames = "Tumor_Sample_Barcode")
 
-        nm = t(apply(numMat, 2, rev))
+          nm = t(apply(numMat, 2, rev))
 
-        lapply(seq_len(nrow(af_mat)), function(i){
-          af_i = af_mat[i,, drop = FALSE]
-          af_i_genes = colnames(af_i)[which(af_i > 0)]
-          af_i_sample = rownames(af_i)
-
-          lapply(af_i_genes, function(ig){
-            af_i_mat = matrix(c(which(rownames(nm) == af_i_sample),
-                                which(colnames(nm) == ig)),
+          lapply(seq_len(nrow(af_mat)), function(i){
+            af_i = af_mat[i,, drop = FALSE]
+            af_i_genes = colnames(af_i)[which(af_i > 0)]
+            af_i_sample = rownames(af_i)
+            
+            lapply(af_i_genes, function(ig){
+              af_i_mat = matrix(c(which(rownames(nm) == af_i_sample),
+                                which(colnames(nm) == ig)+0.3+j*-0.15),
                               nrow = 1)
-            points(af_i_mat, pch = additionalFeaturePch, col= additionalFeatureCol, cex = additionalFeatureCex)
+             
+              points(af_i_mat, pch = additionalFeaturePch, col= additionalFeatureCol[j-1], cex = additionalFeatureCex)
+            })
           })
-        })
-        additionalFeature_legend = TRUE
+         
+        }
       }
     }
   }
