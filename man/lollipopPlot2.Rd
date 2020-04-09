@@ -4,11 +4,28 @@
 \alias{lollipopPlot2}
 \title{Compare two lollipop plots}
 \usage{
-lollipopPlot2(m1, m2, gene = NULL, AACol1 = NULL, AACol2 = NULL,
-  m1_name = NULL, m2_name = NULL, m1_label = NULL, m2_label = NULL,
-  refSeqID = NULL, proteinID = NULL, labPosAngle = 0,
-  labPosSize = 0.9, colors = NULL, axisTextSize = c(1, 1),
-  pointSize = 1.2, domainLabelSize = 1, legendTxtSize = 1)
+lollipopPlot2(
+  m1,
+  m2,
+  gene = NULL,
+  AACol1 = NULL,
+  AACol2 = NULL,
+  m1_name = NULL,
+  m2_name = NULL,
+  m1_label = NULL,
+  m2_label = NULL,
+  refSeqID = NULL,
+  proteinID = NULL,
+  labPosAngle = 0,
+  labPosSize = 0.9,
+  colors = NULL,
+  alpha = 1,
+  axisTextSize = c(1, 1),
+  pointSize = 1.2,
+  domainLabelSize = 1,
+  legendTxtSize = 1,
+  verbose = TRUE
+)
 }
 \arguments{
 \item{m1}{first \code{\link{MAF}} object}
@@ -39,6 +56,8 @@ lollipopPlot2(m1, m2, gene = NULL, AACol1 = NULL, AACol2 = NULL,
 
 \item{colors}{named vector of colors for each Variant_Classification. Default NULL.}
 
+\item{alpha}{color adjustment. Default 1}
+
 \item{axisTextSize}{text size for axis labels. Default 1.}
 
 \item{pointSize}{size of lollipop heads. Default 1.2}
@@ -46,6 +65,8 @@ lollipopPlot2(m1, m2, gene = NULL, AACol1 = NULL, AACol2 = NULL,
 \item{domainLabelSize}{text size for domain labels. Default 1.}
 
 \item{legendTxtSize}{Default 1.}
+
+\item{verbose}{Default TRUE}
 }
 \description{
 Compare two lollipop plots

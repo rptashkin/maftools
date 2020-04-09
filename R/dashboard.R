@@ -15,11 +15,11 @@ dashboard = function(maf, color = NULL, rmOutlier = TRUE, log_conv = FALSE, titv
 
   data.table::setDF(vcs)
   rownames(x = vcs) = vcs$Tumor_Sample_Barcode
-  vcs = vcs[,-1]
+  vcs = vcs[,-1, drop = FALSE]
   vcs = t(vcs)
 
   lo = matrix(data = 1:6, nrow = 2, byrow = TRUE)
-  layout(mat = lo, heights = c(3.5, 3), widths = c(3, 2, 2))
+  graphics::layout(mat = lo, heights = c(3.5, 3), widths = c(3, 2, 2))
   par(cex.axis = fontSize, font = 3, cex.main = titleSize[1], lwd = 1.2)
 
   #--------------------------- variant classification plot -----------------
@@ -72,7 +72,7 @@ dashboard = function(maf, color = NULL, rmOutlier = TRUE, log_conv = FALSE, titv
   #--------------------------- titv summary plot -----------------
   titv = titv(maf = maf, useSyn = TRUE, plot = FALSE)
   titv.counts = titv$raw.counts
-  titv.sums = data.table::melt(colSums(titv.counts[,2:7, with =FALSE]))
+  titv.sums = data.frame(value = colSums(titv.counts[,2:7]), stringsAsFactors = FALSE)
   titv.sums$class = rownames(titv.sums)
   if(!rawcount){
     titv.sums$raw_value = titv.sums$value
@@ -185,7 +185,7 @@ dashboard = function(maf, color = NULL, rmOutlier = TRUE, log_conv = FALSE, titv
 
   data.table::setDF(gs.dat)
   rownames(gs.dat) = gs.dat$Hugo_Symbol
-  gs.dat = gs.dat[,-1]
+  gs.dat = gs.dat[,-1, drop = FALSE]
   gs.dat = t(gs.dat)
   gs.dat = gs.dat[names(sort(rowSums(gs.dat), decreasing = TRUE)),, drop = FALSE]
   gs.dat = gs.dat[,names(sort(colSums(gs.dat))), drop = FALSE]

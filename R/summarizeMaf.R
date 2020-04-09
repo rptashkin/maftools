@@ -6,9 +6,9 @@ summarizeMaf = function(maf, anno = NULL, chatty = TRUE){
 
     if(chatty){
       if(length(NCBI_Build) > 1){
-        message('NOTE: Mutiple reference builds found!')
+        cat('--Mutiple reference builds found\n')
         NCBI_Build = do.call(paste, c(as.list(NCBI_Build), sep=";"))
-        message(NCBI_Build)
+        cat(NCBI_Build)
       }
     }
   }else{
@@ -21,8 +21,8 @@ summarizeMaf = function(maf, anno = NULL, chatty = TRUE){
     if(length(Center) > 1){
       Center = do.call(paste, c(as.list(Center), sep=";"))
       if(chatty){
-        message('Mutiple centers found.')
-        print(Center)
+        cat('--Mutiple centers found\n')
+        cat(Center)
       }
     }
   }else{
@@ -115,12 +115,12 @@ summarizeMaf = function(maf, anno = NULL, chatty = TRUE){
   summary[,Mean := vc.mean]
   summary[,Median := vc.median]
 
-  if(chatty){
-    print(summary)
-
-    message("Gene Summary..")
-    print(hs.cast)
-  }
+  # if(chatty){
+  #   print(summary)
+  #
+  #   cat("Gene Summary:\n")
+  #   print(hs.cast)
+  # }
 
   #Check for flags.
   if(nrow(hs.cast) > 10){
@@ -128,27 +128,30 @@ summarizeMaf = function(maf, anno = NULL, chatty = TRUE){
     topten = topten[topten %in% flags]
       if(chatty){
         if(length(topten) > 0){
-          message('NOTE: Possible FLAGS among top ten genes:')
-          print(topten)
+          cat('--Possible FLAGS among top ten genes:\n')
+          for(temp in topten){
+            cat(paste0("  ", temp, "\n"))
+          }
       }
     }
   }
 
   if(chatty){
-    message("Checking clinical data..")
+    cat("-Processing clinical data\n")
   }
 
   if(is.null(anno)){
     if(chatty){
-      message("NOTE: Missing clinical data! It is strongly recommended to provide clinical data associated with samples if available.")
+      cat("--Missing clinical data\n")
     }
     sample.anno = data.table::data.table(Tumor_Sample_Barcode = maf.tsbs)
   }else if(is.data.frame(x = anno)){
-      sample.anno  = data.table::setDT(anno)
+    sample.anno = data.table::copy(x = anno)
+    data.table::setDT(sample.anno)
       if(!'Tumor_Sample_Barcode' %in% colnames(sample.anno)){
         message(paste0('Available fields in provided annotations..'))
         print(colnames(sample.anno))
-        stop(paste0('Tumor_Sample_Barcode column not found in provided clinical data. Rename column name containing sample names to Tumor_Sample_Barcode if necessary.'))
+        stop(paste0('Tumor_Sample_Barcode column not found in provided clinical data. Rename column containing sample names to Tumor_Sample_Barcode if necessary.'))
       }
     }else{
       if(file.exists(anno)){
@@ -165,7 +168,7 @@ summarizeMaf = function(maf, anno = NULL, chatty = TRUE){
   colnames(sample.anno) = gsub(pattern = ' ', replacement = '_', x = colnames(sample.anno), fixed = TRUE) #replace spaces in column names for annotation data
   sample.anno = as.data.frame(apply(sample.anno, 2, function(y) trimws(y))) #remove trailing whitespaces
   sample.anno[sample.anno == ""] = NA #Replace blanks with NA
-  sample.anno = as.data.frame(apply(sample.anno, 2, function(y) gsub(pattern = " ", replacement = "_", x = y))) #replace spaces with _
+  #sample.anno = as.data.frame(apply(sample.anno, 2, function(y) gsub(pattern = " ", replacement = "_", x = y))) #replace spaces with _
   data.table::setDT(x = sample.anno)
   if(ncol(sample.anno) == 1){
     colnames(sample.anno)[1] = c("Tumor_Sample_Barcode")
@@ -176,8 +179,10 @@ summarizeMaf = function(maf, anno = NULL, chatty = TRUE){
 
   if(!length(maf.tsbs[!maf.tsbs %in% anno.tsbs]) == 0){
     if(chatty){
-      message('Annotation missing for below samples in MAF')
-      print(maf.tsbs[!maf.tsbs %in% anno.tsbs])
+      cat('--Annotation missing for below samples in MAF:\n')
+      for(temp in maf.tsbs[!maf.tsbs %in% anno.tsbs]){
+        cat(paste0("  ", temp, "\n"))
+      }
     }
   }
   sample.anno = sample.anno[Tumor_Sample_Barcode %in% maf.tsbs]
