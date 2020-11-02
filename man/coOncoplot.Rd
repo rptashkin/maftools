@@ -17,6 +17,8 @@ coOncoplot(
   annotationFontSize = 1.2,
   sortByAnnotation1 = FALSE,
   sortByAnnotation2 = FALSE,
+  sampleOrder1 = NULL,
+  sampleOrder2 = NULL,
   additionalFeature1 = NULL,
   additionalFeaturePch1 = 20,
   additionalFeatureCol1 = "white",
@@ -31,9 +33,14 @@ coOncoplot(
   sepwd_samples2 = 0.5,
   colors = NULL,
   removeNonMutated = TRUE,
+  anno_height = 2,
+  legend_height = 4,
   geneNamefont = 0.8,
   showSampleNames = FALSE,
-  SampleNamefont = 1,
+  SampleNamefont = 0.5,
+  barcode_mar = 1,
+  outer_mar = 3,
+  gene_mar = 1,
   legendFontSize = 1.2,
   titleFontSize = 1.5,
   keepGeneOrder = FALSE,
@@ -66,6 +73,10 @@ coOncoplot(
 
 \item{sortByAnnotation2}{same as above but for m2}
 
+\item{sampleOrder1}{Manually speify sample names in m1 for oncolplot ordering. Default NULL.}
+
+\item{sampleOrder2}{Manually speify sample names in m2 for oncolplot ordering. Default NULL.}
+
 \item{additionalFeature1}{a vector of length two indicating column name in the MAF and the factor level to be highlighted.}
 
 \item{additionalFeaturePch1}{Default 20}
@@ -94,11 +105,21 @@ coOncoplot(
 
 \item{removeNonMutated}{Logical. If \code{TRUE} removes samples with no mutations in the oncoplot for better visualization. Default \code{TRUE}.}
 
+\item{anno_height}{Height of clinical margin. Default 2}
+
+\item{legend_height}{Height of legend margin. Default 4}
+
 \item{geneNamefont}{font size for gene names. Default 1}
 
 \item{showSampleNames}{whether to show sample names. Defult FALSE.}
 
-\item{SampleNamefont}{font size for sample names. Default 1}
+\item{SampleNamefont}{font size for sample names. Default 0.5}
+
+\item{barcode_mar}{Margin width for sample names. Default 1}
+
+\item{outer_mar}{Margin width for outer. Default 3}
+
+\item{gene_mar}{Margin width for gene names. Default 1}
 
 \item{legendFontSize}{font size for legend. Default 1.2}
 

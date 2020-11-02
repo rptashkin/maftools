@@ -45,6 +45,7 @@ gisticChromPlot = function(gistic = NULL, fdrCutOff = 0.1, markBands = NULL,
   fdrCutOff = -log10(fdrCutOff)
   gis.scores$Variant_Classification = ifelse(test = as.numeric(gis.scores$fdr) > fdrCutOff, yes = gis.scores$Variant_Classification, no = 'neutral')
   gis.scores$Variant_Classification = factor(gis.scores$Variant_Classification, levels = c('neutral', 'Amp', 'Del'))
+  #return(gis.scores)
 
   if(ref.build == 'hg19'){
     chr.lens = c(249250621, 243199373, 198022430, 191154276, 180915260, 171115067, 159138663,
@@ -135,13 +136,8 @@ gisticChromPlot = function(gistic = NULL, fdrCutOff = 0.1, markBands = NULL,
   cyto_peaks_scores = cyto_peaks_scores[order(Cytoband, abs(amp), decreasing = TRUE)][Cytoband %in% mb$Cytoband][!duplicated(Cytoband)]
   cyto_peaks_scores = cyto_peaks_scores[complete.cases(cyto_peaks_scores)]
 
-  if(nrow(cyto_peaks_scores) > 1){
-    wordcloud::textplot(x = cyto_peaks_scores$Start_Position_updated, y = cyto_peaks_scores$amp,
-                        words = cyto_peaks_scores$Cytoband, new = FALSE, font = 3, cex = txtSize)
-  }else{
-    text(x = cyto_peaks_scores$Start_Position_updated, y = cyto_peaks_scores$amp,
-         labels = cyto_peaks_scores$Cytoband, font = 3, cex = txtSize)
-  }
+  text(x = cyto_peaks_scores$Start_Position_updated, y = cyto_peaks_scores$amp,
+       labels = cyto_peaks_scores$Cytoband, font = 3, cex = txtSize)
 
   if(!is.null(maf)){
     par(mar = c(0, 4, 0, 1))
@@ -152,20 +148,22 @@ gisticChromPlot = function(gistic = NULL, fdrCutOff = 0.1, markBands = NULL,
 
     data.table::setkey(x = mut_dat, Chromosome, Start_Position, End_Position)
     data.table::setkey(x = gis.scores, Chromosome, Start_Position, End_Position)
-    mut_dat = data.table::foverlaps(y = gis.scores, x = mut_dat, mult = "first")
+    mut_dat = data.table::foverlaps(y = gis.scores, x = mut_dat, mult = "all")
+
+    mut_dat = mut_dat[order(G_Score, decreasing = TRUE)][Hugo_Symbol %in% mutGenes]
+    if(nrow(mut_dat[order(G_Score, decreasing = TRUE)][duplicated(Hugo_Symbol)]) > 0){
+      warning("Multiple CNV region overlaps found for follwing genes. Using the most significant entry for highlighting.", immediate. = TRUE)
+      dups = mut_dat[order(G_Score, decreasing = TRUE)][duplicated(Hugo_Symbol)][,.N,Hugo_Symbol][,Hugo_Symbol]
+      print(mut_dat[order(Hugo_Symbol, -G_Score)][Hugo_Symbol %in% dups, .(Hugo_Symbol, Chromosome, Start_Position, End_Position, Variant_Classification, fdr ,G_Score )])
+    }
+    mut_dat = mut_dat[!duplicated(Hugo_Symbol)]
     color = c(color, 'neutral' = 'black')
 
     if(nrow(mut_dat) == 0){
       warning("Could not find mutations")
     }else{
-      if(nrow(mut_dat) > 1){
-        wordcloud::textplot(x = mut_dat$Start_Position_updated, y = rep(0.8, nrow(mut_dat)),
-                            words = mut_dat$Hugo_Symbol, new = FALSE, font = 3, srt = 90,
-                            cex = mutGenesTxtSize, xpd = TRUE, adj = 1, col = color[as.character(mut_dat$Variant_Classification)])
-      }else{
-        text(x = mut_dat$Start_Position_updated, y = 0, labels = mut_dat$Hugo_Symbol,
-             srt = 90, cex = mutGenesTxtSize, xpd = TRUE, col = color[as.character(mut_dat$Variant_Classification)], font = 3, adj = 0, xpd = TRUE)
-      }
+      text(x = mut_dat$Start_Position_updated, y = 0, labels = mut_dat$Hugo_Symbol,
+           srt = 90, cex = mutGenesTxtSize, xpd = TRUE, col = color[as.character(mut_dat$Variant_Classification)], font = 3, adj = 0, xpd = TRUE)
     }
   }
   #return(mut_dat)

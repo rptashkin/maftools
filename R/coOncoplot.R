@@ -10,6 +10,8 @@
 #' @param annotationColor2 list of colors to use for `clinicalFeatures2` Default NULL.
 #' @param sortByAnnotation1 logical sort oncomatrix (samples) by provided `clinicalFeatures1`. Sorts based on first `clinicalFeatures1`.  Defaults to FALSE. column-sort
 #' @param sortByAnnotation2 same as above but for m2
+#' @param sampleOrder1 Manually speify sample names in m1 for oncolplot ordering. Default NULL.
+#' @param sampleOrder2 Manually speify sample names in m2 for oncolplot ordering. Default NULL.
 #' @param additionalFeature1 a vector of length two indicating column name in the MAF and the factor level to be highlighted.
 #' @param additionalFeaturePch1 Default 20
 #' @param additionalFeatureCol1 Default "white"
@@ -29,7 +31,12 @@
 #' @param m2Name optional name for second cohort
 #' @param geneNamefont font size for gene names. Default 1
 #' @param showSampleNames whether to show sample names. Defult FALSE.
-#' @param SampleNamefont font size for sample names. Default 1
+#' @param barcode_mar Margin width for sample names. Default 1
+#' @param gene_mar Margin width for gene names. Default 1
+#' @param outer_mar Margin width for outer. Default 3
+#' @param SampleNamefont font size for sample names. Default 0.5
+#' @param anno_height Height of clinical margin. Default 2
+#' @param legend_height Height of legend margin. Default 4
 #' @param legendFontSize font size for legend. Default 1.2
 #' @param titleFontSize font size for title. Default 1.5
 #' @param keepGeneOrder force the resulting plot to use the order of the genes as specified. Default FALSE
@@ -52,11 +59,12 @@ coOncoplot = function(m1, m2, genes = NULL, m1Name = NULL, m2Name = NULL,
                        clinicalFeatures1 = NULL, clinicalFeatures2 = NULL,
                        annotationColor1 = NULL, annotationColor2 = NULL, annotationFontSize = 1.2,
                        sortByAnnotation1 = FALSE, sortByAnnotation2 = FALSE,
+                      sampleOrder1 = NULL, sampleOrder2 = NULL,
                       additionalFeature1 = NULL, additionalFeaturePch1 = 20, additionalFeatureCol1 = "white", additionalFeatureCex1 = 0.9,
                       additionalFeature2 = NULL, additionalFeaturePch2 = 20, additionalFeatureCol2 = "white", additionalFeatureCex2 = 0.9,
                       sepwd_genes1 = 0.5, sepwd_samples1 = 0.5, sepwd_genes2 = 0.5, sepwd_samples2 = 0.5,
-                       colors = NULL, removeNonMutated = TRUE,
-                       geneNamefont = 0.8, showSampleNames = FALSE, SampleNamefont = 1,
+                       colors = NULL, removeNonMutated = TRUE, anno_height = 2, legend_height = 4,
+                       geneNamefont = 0.8, showSampleNames = FALSE, SampleNamefont = 0.5, barcode_mar = 1, outer_mar = 3, gene_mar = 1,
                        legendFontSize = 1.2, titleFontSize = 1.5, keepGeneOrder=FALSE,
                        bgCol = "#CCCCCC", borderCol = "white"){
 
@@ -89,11 +97,10 @@ coOncoplot = function(m1, m2, genes = NULL, m1Name = NULL, m2Name = NULL,
   m2Name = paste(m2Name, ' (N = ' , m2.sampleSize, ')',sep = '')
 
   if(is.null(colors)){
-    vc_col = get_vcColors()
+    vc_col = get_vcColors(websafe = FALSE)
   }else{
     vc_col = colors
   }
-
 
   m12_annotation_colors = NULL
   if(!is.null(clinicalFeatures1) & !is.null(clinicalFeatures2)){
@@ -108,6 +115,7 @@ coOncoplot = function(m1, m2, genes = NULL, m1Name = NULL, m2Name = NULL,
   #Get matrix dimensions and legends to adjust plot graphics::layout
   nm1 = print_mat(maf = m1, genes = genes, removeNonMutated = removeNonMutated,
                   test = TRUE, colors = colors)
+  #print(nm1)
   nm1_ncol = ncol(nm1[[1]])
   nm1_vc_cols = nm1[[2]]
 
@@ -117,16 +125,16 @@ coOncoplot = function(m1, m2, genes = NULL, m1Name = NULL, m2Name = NULL,
   nm2_vc_cols = nm2[[2]]
 
   if(!is.null(clinicalFeatures1) || !is.null(clinicalFeatures2)){
-    mat_lo = mat_lo = matrix(data = c(1,3,5,2,4,6,7,7,7), nrow = 3, ncol = 3, byrow = TRUE)
+    mat_lo = matrix(data = c(1,3,5,2,4,6,7,7,7), nrow = 3, ncol = 3, byrow = TRUE)
     mat_lo = graphics::layout(mat = mat_lo,
-                    widths = c(6 * (nm1_ncol/nm2_ncol), 1.5, 6), heights = c(12, 3, 4))
+                    widths = c(6 * (nm1_ncol/nm2_ncol), gene_mar, 6), heights = c(12, anno_height, legend_height))
   }else{
     mat_lo = matrix(data = c(1,2,3,4,4,4), nrow = 2, ncol = 3, byrow = TRUE)
     mat_lo = graphics::layout(mat = mat_lo,
-                    widths = c(6 * (nm1_ncol/nm2_ncol), 1, 6), heights = c(12, 4))
+                    widths = c(6 * (nm1_ncol/nm2_ncol), gene_mar, 6), heights = c(12, legend_height))
   }
 
-
+  #Plot first oncoplot
   m1_legend = print_mat(maf = m1, genes = genes, removeNonMutated = removeNonMutated,
                         clinicalFeatures = clinicalFeatures1, colors = colors,
                         annotationColor = annotationColor1, barcode_size = SampleNamefont,
@@ -134,7 +142,8 @@ coOncoplot = function(m1, m2, genes = NULL, m1Name = NULL, m2Name = NULL,
                         title = m1Name, title_size = titleFontSize,
                         showBarcodes = showSampleNames, bgCol = bgCol, borderCol = borderCol,
                         additionalFeature = additionalFeature1, additionalFeaturePch = additionalFeaturePch1,
-                        additionalFeatureCex = additionalFeatureCex1, additionalFeatureCol = additionalFeatureCol1, sepwd_genes = sepwd_genes1, sepwd_samples = sepwd_samples1)
+                        additionalFeatureCex = additionalFeatureCex1, additionalFeatureCol = additionalFeatureCol1,
+                        sepwd_genes = sepwd_genes1, sepwd_samples = sepwd_samples1, barcodemar = barcode_mar, genemar = outer_mar, sampleOrder = sampleOrder1)
 
 
   if(is.null(clinicalFeatures1) & !is.null(clinicalFeatures2)){
@@ -142,16 +151,18 @@ coOncoplot = function(m1, m2, genes = NULL, m1Name = NULL, m2Name = NULL,
   }
 
   if(showSampleNames){
-    par(mar = c(5, 0, 3, 0))
+    par(mar = c(barcode_mar, 0, 3, 0))
   }else{
     par(mar = c(1, 0, 3, 0))
   }
 
+  #Plot gene names
   nm = matrix(data = 1, nrow = 1, ncol = length(genes))
   image(x = 1:nrow(nm), y = 1:ncol(nm), z = nm, axes = FALSE, xaxt="n", yaxt="n",
         xlab="", ylab="", col = "white")
-  mtext(text = rev(genes), side = 2, adj = 0.5, at = 1:ncol(nm),
-        font = 3, line = -2, cex = geneNamefont, las = 2)
+  text(x = nrow(nm), y = 1:ncol(nm), labels = rev(genes), xpd = TRUE, font = 3, cex = geneNamefont*1.5)
+  # mtext(text = rev(genes), side = 2, adj = 0.5, at = 1:ncol(nm),
+  #       font = 3, line = -2, cex = geneNamefont, las = 2)
 
   if(!is.null(clinicalFeatures1) || !is.null(clinicalFeatures2)){
     plot.new()
@@ -165,16 +176,16 @@ coOncoplot = function(m1, m2, genes = NULL, m1Name = NULL, m2Name = NULL,
                         showBarcodes = showSampleNames, bgCol = bgCol, borderCol = borderCol,
                         additionalFeature = additionalFeature2, additionalFeaturePch = additionalFeaturePch2,
                         additionalFeatureCex = additionalFeatureCex2, additionalFeatureCol = additionalFeatureCol2,
-                        sepwd_genes = sepwd_genes2, sepwd_samples = sepwd_samples2)
+                        sepwd_genes = sepwd_genes2, sepwd_samples = sepwd_samples2, barcodemar = barcode_mar, genemar = outer_mar, sampleOrder = sampleOrder2)
 
   if(!is.null(clinicalFeatures1) & is.null(clinicalFeatures2)){
     plot.new()
   }
 
-  vc_legend = unique(c(names(nm1_vc_cols), names(nm2_vc_cols)))
-  vc_legend = vc_col[vc_legend]
+  vc_legend = list(nm1_vc_cols, nm2_vc_cols)
+  vc_legend = unlist(vc_legend)[unique(names(unlist(vc_legend)))]
+  #vc_legend = vc_col[vc_legend]
   vc_legend = vc_legend[!is.na(vc_legend)]
-
 
   if(is.null(m12_annotation_colors)){
     anno_legend = c(m1_legend, m2_legend)

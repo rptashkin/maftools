@@ -1,29 +1,25 @@
-# CHANGES IN VERSION 2.4.00
-## BUG FIXES
+# CHANGES IN VERSION 2.6.05
+## BUG REPORTS
+- Rainfallplot arrowhead bug. Issue: [628](https://github.com/PoisonAlien/maftools/issues/628) [629](https://github.com/PoisonAlien/maftools/issues/629)
 
-- lollipopPlot2 error with zero mutation Issue: [#480](https://github.com/PoisonAlien/maftools/issues/480)
-- `inferHeterogeneity` PR [#473](https://github.com/PoisonAlien/maftools/issues/473)
-- `oncoplot` cnv crosses border [#472](https://github.com/PoisonAlien/maftools/issues/472)
-- Avoid wrongly naming columns in `annovarToMaf` Issue: [#457](https://github.com/PoisonAlien/maftools/issues/457)
-- Duplicated color code Issue: [#452](https://github.com/PoisonAlien/maftools/issues/452)
-- oncoplot with exprsTbl leads to wrong alignment Issue: [#451](https://github.com/PoisonAlien/maftools/issues/451)
-- plotMafSummary with single sample Issue: [#449](https://github.com/PoisonAlien/maftools/issues/449)
-- Avoid empty spaces and quoates while reading funcotator MAF Issue: [#403](https://github.com/PoisonAlien/maftools/issues/403) [#397](https://github.com/PoisonAlien/maftools/issues/397)
+# CHANGES IN VERSION 2.6.00 (BioC 3.12 version)
+## BUG REPORTS
+- Incorrect deduplication cases while validating MAFs. Issue: [623](https://github.com/PoisonAlien/maftools/issues/623)
+- Fix repeated domain labels in `lollipopPlot2`. Issue: [614](https://github.com/PoisonAlien/maftools/issues/614)
+- Fix Copy number labels and coloring in `coBarPlot`. Issue: [609](https://github.com/PoisonAlien/maftools/issues/609)
+- Fix coloring issues for annotations in `oncoplot` in R < 4.0. Issue: [599](https://github.com/PoisonAlien/maftools/issues/599)
 
 ## ENHANCEMENTS
+- Updated TCGA TMB. All variants from MC3 results are restricted and harmonized to Agilent 35.8 MB capture kit. See `?tcgaCompare` for details. Issue: [612](https://github.com/PoisonAlien/maftools/issues/612)
+- Added `SIMC1` protein to domain database. Issue: [616](https://github.com/PoisonAlien/maftools/issues/616)
+- Added `sampleOrder1` and `sampleOrder2` arguments to `coOncoplot`. Issue: [592](https://github.com/PoisonAlien/maftools/issues/592)
+- Added `gene_mar` `outer_mar` argument to `coOncoplot`. Issue: [260](https://github.com/PoisonAlien/maftools/issues/260)
+- Added sample size warning messages to `mafCompare`. Issue: [602](https://github.com/PoisonAlien/maftools/issues/602)
+- Added `cohortFontSize` and `axisFontSize` to `tcgaCompare`
 
-- Added startgain and startlost to `annovarToMaf` Issue: [#487](https://github.com/PoisonAlien/maftools/issues/487)
-- `y_lims` argument in gisticChromPlot Issue: [#485](https://github.com/PoisonAlien/maftools/issues/485)
-- Added support for highlighting multiple additionalFeatures Issue: [#476](https://github.com/PoisonAlien/maftools/issues/476)
-- Pairwise t-test and mutational load in `tcgaCompare` Issue: [#453](https://github.com/PoisonAlien/maftools/issues/453)
-- Added `titleText` argument to `oncoplot` Issue: [#448](https://github.com/PoisonAlien/maftools/issues/448)
-- Highlight mutated genes on gisticChromplot Issue: [#443](https://github.com/PoisonAlien/maftools/issues/443)
-- Added `legend_height` argument to `oncoplot` Issue: [#346](https://github.com/PoisonAlien/maftools/issues/346)
-- Added `bgBorderCol` `domainBorderCol` `showLegend` argument to `lollipopPlot`
+## NEW FUNCTIONS
+- Added `filterMaf` function. 
 
-## NEW FUNCTIONS AND FEATURES
-
-- `coBarplot` side-by-side barplot for maf comparison Issue: [#486](https://github.com/PoisonAlien/maftools/issues/486)
-- Now you can group genes in `oncoplot` by specific pathways. This can be done by setting `pathways = 'auto'` or by providing a two column data.frame/tsv-file with Gene names and their corresponding pathway belongings.
-
+## DEPRECATED
+- `signatureEnrichment` will be deprecated in future. Currently kept for legacy purpose with a warning message. Issue:  [607](https://github.com/PoisonAlien/maftools/issues/607) [615](https://github.com/PoisonAlien/maftools/issues/615)
 
