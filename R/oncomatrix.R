@@ -29,7 +29,10 @@ createOncoMatrix = function(m, g = NULL, chatty = TRUE, add_missing = FALSE){
     subMaf[, Hugo_Symbol := factor(x = Hugo_Symbol, levels = g)]
   }
 
-  cnv_events = c(c("Amp", "Del"), as.character(subMaf[Variant_Type == "CNV"][, .N, Variant_Classification][, Variant_Classification]))
+  cnv_events = c(c("Amp", "Del",
+                   "Amplification", "CNLOH",
+                   "Gain","Gain + LOH", "HETLOSS", "HOMDEL"),
+                 as.character(subMaf[Variant_Type == "CNV"][, .N, Variant_Classification][, Variant_Classification]))
   cnv_events = unique(cnv_events)
 
   oncomat = data.table::dcast(data = subMaf[,.(Hugo_Symbol, Variant_Classification, Tumor_Sample_Barcode)], formula = Hugo_Symbol ~ Tumor_Sample_Barcode,
