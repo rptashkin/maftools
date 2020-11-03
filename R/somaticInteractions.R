@@ -63,9 +63,14 @@ somaticInteractions = function(maf, top = 25, genes = NULL, pvalue = c(0.05, 0.0
   }
 
   #pairwise fisher test source code borrowed from: https://www.nature.com/articles/ncomms6901
-  interactions = sapply(1:ncol(mutMat), function(i) sapply(1:ncol(mutMat), function(j) {f<- try(fisher.test(mutMat[,i], mutMat[,j]), silent=TRUE); if(class(f)=="try-error") NA else ifelse(f$estimate>1, -log10(f$p.val),log10(f$p.val))} ))
+  pvals = sapply(1:ncol(mutMat), function(i) sapply(1:ncol(mutMat), function(j) {f<- try(fisher.test(mutMat[,i], mutMat[,j]), silent=TRUE); if(class(f)=="try-error") NA else f$p.val} ))
+  pvals = matrix(p.adjust(pvals), ncol = ncol(mutMat))
+
+  #interactions = sapply(1:ncol(mutMat), function(i) sapply(1:ncol(mutMat), function(j) {f<- try(fisher.test(mutMat[,i], mutMat[,j]), silent=TRUE); if(class(f)=="try-error") NA else ifelse(f$estimate>1, -log10(f$p.val),log10(f$p.val))} ))
   oddsRatio <- oddsGenes <- sapply(1:ncol(mutMat), function(i) sapply(1:ncol(mutMat), function(j) {f<- try(fisher.test(mutMat[,i], mutMat[,j]), silent=TRUE); if(class(f)=="try-error") f=NA else f$estimate} ))
+  interactions = sapply(1:ncol(mutMat), function(i) sapply(1:ncol(mutMat), function(j) {f<- try(fisher.test(mutMat[,i], mutMat[,j]), silent=TRUE); if(class(f)=="try-error") NA else ifelse(f$estimate>1, -log10(pvals[i,j]),log10(pvals[i,j]))} ))
   rownames(interactions) = colnames(interactions) = rownames(oddsRatio) = colnames(oddsRatio) = colnames(mutMat)
+
 
   sigPairs = which(x = 10^-abs(interactions) < 1, arr.ind = TRUE)
   sigPairs2 = which(x = 10^-abs(interactions) >= 1, arr.ind = TRUE)
@@ -91,7 +96,7 @@ somaticInteractions = function(maf, top = 25, genes = NULL, pvalue = c(0.05, 0.0
                                   d = cbind(d, combn)
                                   d
                         }), fill = TRUE)
-
+  #sigPairsTbl$padjust = p.adjust(sigPairsTbl$pValue)
   sigPairsTbl = sigPairsTbl[!gene1 == gene2] #Remove doagonal elements
   sigPairsTbl[is.na(sigPairsTbl)] = 0
   sigPairsTbl$Event = ifelse(test = sigPairsTbl$oddsRatio > 1, yes = "Co_Occurence", no = "Mutually_Exclusive")
@@ -135,7 +140,7 @@ somaticInteractions = function(maf, top = 25, genes = NULL, pvalue = c(0.05, 0.0
       rownames(gene_sum) = paste0(apply(gene_sum, 1, paste, collapse = ' ['), ']')
     }
 
-    par(bty="n", mar = c(1, 4, 4, 2)+.1, las=2, fig = c(0, 1, 0, 1))
+    par(bty="n", mar = c(1, 6.5, 6.5, 2)+.1, las=2, fig = c(0, 1, 0, 1))
 
     # adjust breaks for colors according to predefined legend values
     breaks = NA
